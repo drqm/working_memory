@@ -8,7 +8,7 @@ Created on Sat Dec 26 13:01:34 2020
 import mne
 import os
 import os.path as op
-#from stormdb.access import Query
+from stormdb.access import Query
 from sys import argv
 
 # set a few environmental variables to make sure it works properly
@@ -22,13 +22,13 @@ os.environ['QT_API'] = 'pyqt5'
 
 #necessary for coreg gui
 
-#os.environ['MESA_GL_VERSION_OVERRIDE'] = '3.2'
+os.environ['MESA_GL_VERSION_OVERRIDE'] = '3.2'
 
 #subj_dir = op.join('/projects',proj_name,'scratch','fs_subjects_dir')
 #fwd_dir = op.join('/projects',proj_name,'scratch','forward_models')
 
-#subj_dir = '/projects/MINDLAB2020_MEG-UncertaintyModulation/scratch/fs_subjects_dir'
-subj_dir = '../../misc/fs_subjects_dir'
+#subj_dir = '/projects/MINDLAB2020_MEG-UncertaintyModulation/scratch/APR_subjects_dir/fs_subjects_dir'
+subj_dir = '../../scratch/fs_subjects_dir'
 fwd_dir = '../../scratch/forward_models'
 #
 qy = Query(proj_name)
@@ -45,4 +45,5 @@ for subject in subjects:
     inst = op.join('../../scratch/maxfiltered_data',
                'tsss_st16_corr96/',subject,'loc_raw_tsss.fif')
     trans = op.join('../../trans',subject+'-trans.fif')
-    mne.gui.coregistration(subject=subject,inst = inst,subjects_dir = subj_dir)
+    mne.gui.coregistration(subject=subject,inst = inst,subjects_dir = subj_dir,
+                           advanced_rendering = False)

@@ -28,7 +28,7 @@ event_ids = [[['same',1],['different1',2],['different2',3]],
 
 qy = Query(project)
 subs = qy.get_subjects()
-scode = 16
+scode = 24
 sub = subs[scode-1]#'0002_BYG'#'0002_BYG'#'0008_HMD'#'0002_BYG'
 conds = ['main','inv'] #  ['mainv2','invv2']
 save_averages = True#False#True
@@ -134,7 +134,7 @@ plt.close('all')
 ## Source analysis
 if compute_sources:
     print('\n computing sources \n')
-    fwd_fn = op.join(fwd_path, sub + '_main_session-fwd.fif')
+    fwd_fn = op.join(fwd_path, sub + '-fwd.fif')
     fwd = mne.read_forward_solution(fwd_fn)
     #compute noise covariance
     noise_cov = mne.compute_covariance([epochs[e] for e in epochs],tmin = -1,
@@ -160,10 +160,10 @@ if compute_sources:
 
             if plot_sources:
                 brain = sources[e][c].plot(subjects_dir=subjects_dir,initial_time=-1,hemi = 'split',
-                                           time_viewer=False, views=['lateral','medial'],
+                                           time_viewer=True, views=['lateral','medial'],
                                            title = 'ERF- {} {} {}'.format(sub,e,c))
-                brain.save_movie(avg_path + '/figures/{}_ERF_sources_{}_{}.mov'.format(sub,e,c),
-                                 framerate=4,time_dilation = 10)
+                # brain.save_movie(avg_path + '/figures/{}_ERF_sources_{}_{}.mov'.format(sub,e,c),
+                #                 framerate=4,time_dilation = 10)
                 brain.close()
 
     src_fname = op.join(avg_path,'data',sub + '_evoked_sources.p')

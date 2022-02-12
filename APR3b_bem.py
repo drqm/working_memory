@@ -14,7 +14,11 @@ from sys import argv
 proj_name = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
 os.environ['MINDLABPROJ']= proj_name
 
-subj_dir = op.join('/projects',proj_name,'misc','fs_subjects_dir')
+# change if necessary:
+#os.environ['MNE_ROOT']='~/miniconda3/envs/mne'
+os.environ['MNE_ROOT']='~/miniconda3/envs/mne3d'
+
+subj_dir = op.join('/projects',proj_name,'scratch','fs_subjects_dir')
 fwd_dir = op.join('/projects',proj_name,'scratch','forward_models')
 
 qy = Query(proj_name)
@@ -30,6 +34,6 @@ bem_jobs = {}
 for subject in subjects:
     bem_jobs[subject] = Freesurfer(proj_name= proj_name,subjects_dir = subj_dir)
     #bem_jobs[subject].create_bem_surfaces?
-    bem_jobs[subject].create_bem_surfaces(subject=subject,make_coreg_head =True)
+    bem_jobs[subject].create_bem_surfaces(subject=subject,make_coreg_head = True)
     bem_jobs[subject].submit(fake=True)
     bem_jobs[subject].submit()
