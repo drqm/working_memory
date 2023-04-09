@@ -11,9 +11,9 @@ from stormdb.access import Query
 
 project = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
 os.environ['MINDLABPROJ']=project
-os.environ['MNE_ROOT']='/users/david/miniconda3/envs/mne' # for surfer
+os.environ['MNE_ROOT']='/users/david/miniconda3/envs/mne3d' # for surfer
 os.environ['MESA_GL_VERSION_OVERRIDE'] = '3.2'
-script_dir = '/projects/{}/scripts/invmain/'.format(project)
+script_dir = '/projects/{}/scripts/working_memory/'.format(project)
 # args = {}
 # args['save_averages'] = True
 # args['compute_sources'] = True
@@ -26,11 +26,13 @@ qr = Query(project)
 sub_codes = qr.get_subjects()
 
 #subNs = np.arange(8) + 1
-subNs = [2,11,12,13,14,15]#,11,12,13,14,15,16]
+subNs = range(21,91)#,11,12,13,14,15,16]
 cb = ClusterBatch(project)
 for s in subNs:
-    sub = sub_codes[s-1]
-    submit_cmd = 'python {}TFR_analyses.py {}'.format(script_dir,sub)
+    #sub = sub_codes[s-1]
+    submit_cmd = 'python {}APR5a_TFR_analyses.py {}'.format(script_dir,s)
     cb.add_job(cmd=submit_cmd, queue='short.q',n_threads = 2,cleanup = False)
     
 cb.submit()
+
+

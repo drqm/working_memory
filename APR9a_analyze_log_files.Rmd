@@ -1,0 +1,87 @@
+---
+title: "analyze_log_files"
+author: "David Quiroga"
+date: "3/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(lme4)
+library(lmerTest)
+```
+
+```{r}
+log_dir <- "../../misc/working_memory_logs"
+fig_dir <- "../../scratch/working_memory/results/figures"
+bnames <- c('maintenance','manipulation')
+lnames <- c('recognize','invert')
+```
+
+```{r}
+## Load data:
+subjects <- 21:90
+scount <- 0
+d <- c()
+for (sub in subjects){
+  scount <- scount + 1
+  for (b in 1:length(lnames)){
+    ln <- lnames[b]
+    dfile <- sprintf('%s/%04.f_%s_MEG.csv',log_dir,sub,ln)
+    print(dfile)
+    d0 <- read.table(dfile,sep=',',header=T)
+    d0$block <- bnames[b]
+    if (scount == 1 & b == 1){
+      d <- d0
+    }else{
+      d <- rbind(d,d0)
+    }
+  }
+}
+```
+
+```{r}
+##Calculate accuracy
+d$accuracy <- as.numeric(d$type == d$response)
+```
+
+```{r}
+## Aggregate data
+d2 <- aggregate(d$accuracy, by=list(d$subject,d$block), mean)
+colnames(d2) <- c('subject','block','accuracy')
+```
+
+```{r}
+## Make a plot
+ap <- ggplot(data=d2, aes(block,accuracy, fill = block)) +
+  geom_point(alpha=.1) +
+  geom_line(alpha = .1, aes(group=subject)) +
+  geom_violin(alpha = .1) +
+  scale_fill_manual(values=c('blue','red'))+
+  theme_bw()
+ggsave(paste0(fig_dir,'/behavioral_accuracy.pdf'), ap, dpi= 300, width=15, height=10,units='cm')
+```
+
+
+
+```{r}
+m0 <- glmer(accuracy~block + (1+block|subject), data = d, family = 'binomial')
+```
+
+```{r}
+summary(m0)
+```
+
+```{r}
+#subjects to exclude
+#exc <- unique(d2[d2$accuracy <= 0.5 & d2$block == 'maintenance','subject'])
+exc <- unique(d2[d2$accuracy <= 0.5,'subject'])
+print(exc)
+```
+
+
+

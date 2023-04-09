@@ -29,7 +29,7 @@ if len(argv)>1:
     subno = argv[1:]
 
 subjects = [subs[int(s)-1] for s in subno]
-
+#subjects = ['fsaverage']
 bem_jobs = {}
 for subject in subjects:
     bem_jobs[subject] = Freesurfer(proj_name= proj_name,subjects_dir = subj_dir)

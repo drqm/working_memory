@@ -11,6 +11,7 @@ from os.path import join
 # matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from sys import argv
+from warnings import filterwarnings
 
 import mne
 import numpy as np
@@ -18,6 +19,7 @@ from stormdb.access import Query
 
 from mne.preprocessing import create_ecg_epochs, create_eog_epochs
 #from sys import argv
+filterwarnings("ignore", category=DeprecationWarning)
 
 proj_name = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
 
@@ -107,7 +109,8 @@ for k in icaFileList:
                                    ch_name="EOG001").average()
     # ica topos
     source_idx = range(0, icacomps.n_components_)
-    ica_plot = icacomps.plot_components(source_idx, ch_type="mag")
+    ica_plot_mag = icacomps.plot_components(source_idx, ch_type="mag")
+    ica_plot_grad = icacomps.plot_components(source_idx, ch_type="grad")
     plt.waitforbuttonpress(1)
     #ica_plot.canvas.manager.window.attributes('-topmost',1)
 
@@ -217,10 +220,14 @@ for k in icaFileList:
     print('############')
     print('*** Excluding following components: ', icacomps.exclude)
     print('')
-    ica_plot.savefig(join(resultsRoot,name + ('comps_eog%s-ecg%s.pdf' % ('_'.join(map(str,eog_exclude)),'_'.join(map(str,ecg_exclude))))),format='pdf')
+    #ica_plot_mag.savefig(join(resultsRoot,name + ('comps_eog%s-ecg%s_vis_mag.pdf' % ('_'.join(map(str,eog_exclude)),'_'.join(map(str,ecg_exclude))))),format='pdf')
+    #ica_plot_grad.savefig(join(resultsRoot,name + ('comps_eog%s-ecg%s_vis_grad.pdf' % ('_'.join(map(str,eog_exclude)),'_'.join(map(str,ecg_exclude))))),format='pdf')
+    ica_plot_mag.savefig(join(resultsRoot,'{}comps_eog_{}-ecg_{}_vis_mag.pdf'.format(name,eog_exclude,ecg_exclude)))
+    ica_plot_grad.savefig(join(resultsRoot,'{}comps_eog_{}-ecg_{}_vis_grad.pdf'.format(name,eog_exclude,ecg_exclude)))
+
     plt.close('all')
 
     #raw_ica = icacomps.apply(raw)
     #raw_ica.save(join(resultsRoot,name + '_ica-vis-raw.fif'), overwrite=True,verbose=False)
     ica = icacomps.copy()
-    ica.save(join(resultsRoot, name + '-ica.fif'))
+    ica.save(join(resultsRoot, name + '-ica.fif'),overwrite=True)
