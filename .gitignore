@@ -3,7 +3,6 @@
 *pycache*
 *.RData
 *.Rhistory
-
+*-checkpoint.ipynb
 # Folders
 .ipynb_checkpoints/
-core
