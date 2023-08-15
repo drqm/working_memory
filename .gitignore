@@ -1,3 +1,8 @@
 # Built application files
 *.qsub
 *pycache*
+*.RData
+*.Rhistory
+
+# Folders
+.ipynb_checkpoint/
