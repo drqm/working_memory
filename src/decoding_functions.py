@@ -6,6 +6,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.decomposition import PCA    
 from mne.decoding import GeneralizingEstimator, get_coef, LinearModel,cross_val_multiscore,SlidingEstimator
 
 def smooth_data(data, tstart, tstep, twin, Fs, taxis=2):
@@ -38,8 +39,11 @@ def smooth_data(data, tstart, tstep, twin, Fs, taxis=2):
     return new_data, ntime
 
 def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = None, lmask=[], score = True, n_features = 'all',
-                         twindows = None, l_freq=None, h_freq =None, smooth=None, save_filters=None,
-                         save_scores = None, save_gen=None, save_patterns=None, save_times=None, penalty='l2'):
+                         twindows = None, l_freq=None, h_freq =None, smooth=None, save_filters=None,ncomps=None,
+                         save_scores = None, save_gen=None, save_patterns=None, save_times=None, save_comps = None,
+                         penalty='l2',scoring_output = 'mean_acc', drop_incorrect=None):
+        
+        ###### Select correct only!
         
         ## Prepare the data and get timepoints
         if isinstance(epochs, mne.Epochs):
@@ -57,7 +61,7 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
         times = {e: epochs[e].times for e in epochs}
         
         # Get data depending on mode (source vs sensor)
-        data, labels, containers = {}, {}, {}
+        data, labels, containers, comps = {}, {}, {}, {}
         for e in epochs:
             if mode == 'source':
                 csource = mne.beamformer.apply_lcmv_epochs(epochs[e],inv)
@@ -69,8 +73,22 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
             elif mode == 'sensor':
                 data[e] = epochs[e].get_data()
                 containers[e] = epochs[e].average().copy()
+
             labels[e] = epochs[e].events[:,2]
-            
+            comps[e] = []
+
+            if ncomps:
+                print('\n### PCA decomposition ####\n')
+                pca = PCA(n_components=ncomps)
+                cedata = data[e].copy().transpose([1,0,2])
+                y,x,z = cedata.shape
+                cedata = cedata.reshape((cedata.shape[0],-1)).T
+                pdata = pca.fit(cedata).transform(cedata)
+                ## Reshape back:
+                pdata = pdata.reshape([x,z,ncomps]).transpose([0,2,1])
+                data[e] = pdata
+                comps[e] = pca.components_
+
         # Perform filtering if required
         if l_freq or h_freq:
             for e in data:
@@ -100,7 +118,12 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
             elif kind == 'Sliding':
                 gen[e] = SlidingEstimator(clf, n_jobs=2, scoring = 'balanced_accuracy', verbose = True)
             
-            gen[e].fit(X = data[e], y = labels[e])   
+            caeix = np.arange(data[e].shape[0])
+            if drop_incorrect:
+                print('dropping incorrect trials')
+                caeix = np.array([a for a in caeix if a not in drop_incorrect[e]])
+            print(caeix)
+            gen[e].fit(X = data[e][caeix], y = labels[e][caeix])   
                 
             ## Get patterns and filters
             print('extractig patterns and filters')
@@ -112,8 +135,8 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
                 cpatterns = np.expand_dims(cpatterns,1)
                 cfilters = np.expand_dims(cfilters,1)
 
-            # Export patterns and filters to evoked or sources
-            if mode == 'source':
+            # Export patterns and filters to evoked, sources or components
+            if (mode == 'source') & (not ncomps):
                 # Loop over classes:
                 for cl in range(cpatterns.shape[1]):
                     cname = e + str(cl+1)
@@ -124,9 +147,9 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
                     patterns[cname].data = cpatterns[:,cl,:].copy()
                     filters[cname].data = cfilters[:,cl,:].copy()
                 
-            elif mode == 'sensor':
+            elif (mode == 'sensor') & (not ncomps):
                 cinfo = containers[e].info.copy()
-                cinfo['srate'] = 1 / np.diff(times[e])[0]
+                cinfo['sfreq'] = 1 / np.diff(times[e])[0]
                 # Loop over classes:
                 for cl in range(cpatterns.shape[1]):
                     cname = e + str(cl+1)
@@ -135,16 +158,70 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
                     filters[cname] = patterns[cname].copy()
                     filters[cname].data = cfilters[:,cl,:].copy()
             
+            elif ncomps:
+                csrate = 1 / np.diff(times[e])[0]
+                ch_names = ['ch' + str(ccc + 1) for ccc in range(ncomps)]
+                cinfo = mne.create_info(ch_names, csrate)
+                # Loop over classes:
+                for cl in range(cpatterns.shape[1]):
+                    cname = e + str(cl+1)
+                    patterns[cname] = mne.EvokedArray(cpatterns[:,cl,:].copy(), info = cinfo, baseline = None,
+                                                      tmin=times[e][0], comment=e)
+                    filters[cname] = patterns[cname].copy()
+                    filters[cname].data = cfilters[:,cl,:].copy()
+
             # Obtain scores looping over conditions to test:
             for e2 in data:
                 scond = e2 + '_from_' + e
                 print('scoring ', scond)
                 if e != e2:
                     # If different conditions, perform test
-                    scores[scond] = gen[e].score(data[e2], labels[e2])
+                    if scoring_output == 'mean_acc':
+                        scores[scond] = gen[e].score(data[e2], labels[e2])
+                    elif scoring_output == 'trial_acc':
+                        scores[scond] = gen[e].predict(data[e2])
                 else:
                     # If same condition, cross-validate
-                    scores[scond] = cross_val_multiscore(gen[e], data[e],labels[e], cv = 5,n_jobs = 5).mean(0)
+                    if scoring_output == 'mean_acc':
+                        scores[scond] = cross_val_multiscore(gen[e], data[e2][caeix],labels[e2][caeix],
+                                                              cv = 5,n_jobs = 5).mean(0)
+                    
+                    elif scoring_output == 'trial_acc':
+                        # We need a custom cross-validation in this case
+                        if kind == 'Generalizing':
+                            cgen = GeneralizingEstimator(clf, n_jobs=2, scoring = 'balanced_accuracy', verbose = True)
+                        elif kind == 'Sliding':
+                            cgen = SlidingEstimator(clf, n_jobs=2, scoring = 'balanced_accuracy', verbose = True)
+                        
+                        scores[scond] = []
+                        nsamp = len(labels[e2])
+                        # Divide the data in 5 chunks of cv_n length
+                        cv_n = np.floor(nsamp / 5) 
+                        ctix = np.arange(nsamp)
+                        rix = ctix.copy()
+                        
+                        # Randomize trials
+                        np.random.shuffle(rix)
+                        
+                        # Use crossvalidated predictions (loop over the 5 folds)
+                        for ccv in range(5):                            
+                            cstart, cend = int(ccv*cv_n), int((ccv+1)*cv_n*(ccv != 4) + nsamp*(ccv == 4)) # first and last trial index
+                            print(cstart,cend)
+                            crix = rix[cstart:cend] # select test trials
+                            crix_neg = np.array([cctix for cctix in ctix if (cctix not in crix) & (cctix in caeix)]) #select training trials
+                            
+                            print(crix_neg)
+                            print(crix)
+                            
+                            scores[scond] += [cgen.fit(X = data[e][crix_neg], y = labels[e][crix_neg]).predict(data[e2][crix])]
+                        
+                        scores[scond] = np.concatenate(scores[scond])
+                        bix = np.argsort(rix)
+                        print(rix[bix])
+                        scores[scond] = scores[scond][bix]
+                        print(scores[scond].shape)
+                if scoring_output == 'trial_acc':
+                    scores[scond] = np.array(scores[scond] - np.expand_dims(np.expand_dims(labels[e2],axis=-1),axis=-1) == 0).astype(int)
         
         ## Save output if requried
         
@@ -177,8 +254,14 @@ def WM_time_gen_classify(epochs, mode='sensor', kind = 'Generalizing', inv = Non
             times_file = open(save_times,'wb')
             dump(times, times_file)
             times_file.close()
-            
-        return gen, patterns, filters, scores, times
+        
+        if save_comps:
+           print('saving components')
+           comps_file = open(save_comps,'wb')
+           dump(comps, comps_file)
+           comps_file.close() 
+
+        return gen, patterns, filters, scores, times, comps
 
 def plot_time_gen_accuracy(scores, times, masks = None, nrows=2,
                            ncols=2,vlines=[],hlines=[],
@@ -238,9 +321,8 @@ def plot_time_gen_accuracy(scores, times, masks = None, nrows=2,
         plt.colorbar(im, ax=cax)
     
     plt.tight_layout()
-    
     if savefig:
-        plt.savefig(savefig)
+        fig.savefig(savefig)
 
 def plot_diagonal_accuracy(scores, times, CI = None, masks = None, nrows=2,
                            ncols=2,vlines=[],hlines=[],chance=1/2,
@@ -307,6 +389,8 @@ def plot_diagonal_accuracy(scores, times, CI = None, masks = None, nrows=2,
         if ylims:
             cax.set_ylim(ylims)
     plt.tight_layout()
+    if savefig:
+        plt.savefig(savefig)
 
 def get_probs(gen, epochs, train_times, blocks = None):
     

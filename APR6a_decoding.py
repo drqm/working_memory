@@ -1,3 +1,10 @@
+# Append to path
+project = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
+project_dir = '/projects/' + project
+scripts_dir = project_dir + '/scripts/working_memory/'
+import sys
+sys.path.append(scripts_dir)
+
 import mne
 import os
 import os.path as op
@@ -11,13 +18,12 @@ import pandas as pd
 import src.preprocessing as pfun 
 import src.decoding_functions as dfun
 import importlib
-
+importlib.reload(dfun)
 filterwarnings("ignore", category=DeprecationWarning)
 
 ##################### Define relevant variables ################################
 # Project info
-project = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
-project_dir = '/projects/' + project
+
 os.environ['MINDLABPROJ']= project
 os.environ['MNE_ROOT']='~/miniconda3/envs/mne'
 os.environ['MESA_GL_VERSION_OVERRIDE'] = '3.2'
@@ -41,7 +47,7 @@ if len(argv) > 1:
     block = argv[1]
 
 #Subject
-scode = 24
+scode = 11
 if len(argv) > 2:
     scode = int(argv[2])
 sub = subs[scode-1] 
@@ -174,16 +180,22 @@ if mode == 'source':
     fwd = mne.read_forward_solution(op.join(fwd_path, sub + '_vol-fwd.fif'))
    
     # Select Magnetometers
-    epochs = {e: epochs[e].load_data().pick_types('mag') for e in epochs} 
+    #epochs = {e: epochs[e].load_data().pick_types('grad') for e in epochs}
+    
     print(epochs)
     
     # Calculate data covariance
     data_cov = mne.compute_covariance([epochs[e] for e in epochs], 
                                       tmin= 0, tmax = tmax, rank ='info')
+    
+    # Calculate noise covariance
+    noise_cov = mne.make_ad_hoc_cov(epochs[conds[0]].info)
 
     # Calculate inverse solution
     inv = mne.beamformer.make_lcmv(epochs[conds[0]].info,
-                                   fwd, data_cov, reg=0.05,
+                                   fwd, data_cov, 
+                                   noise_cov=noise_cov,
+                                   reg=0.05,
                                    pick_ori='max-power',
                                    weight_norm= 'nai',
                                    rank = 'info')
@@ -219,7 +231,7 @@ elif mode == 'sensor':
     lmask = []
     
 ################################# Perform decoding ##################################
-gen, patterns, filters, scores, times = dfun.WM_time_gen_classify(epochs, mode = mode,
+gen, patterns, filters, scores, times, _ = dfun.WM_time_gen_classify(epochs, mode = mode,
                                                                   inv = inv, lmask = lmask,
                                                                   score = True, 
                                                                   n_features = n_features,
@@ -237,3 +249,38 @@ gen, patterns, filters, scores, times = dfun.WM_time_gen_classify(epochs, mode =
 print('Plotting')
 dfun.plot_time_gen_accuracy(scores, times, nrows=nrows, ncols=ncols, vlines=vlines,
                             hlines=hlines, savefig=fig_path, vmin=vmin, vmax=vmax)
+
+#################### Perform decoding of block-flipped labels #######################
+# output paths
+# inv_flipped = epochs['manipulation'].copy()
+# cmodulo = np.sum(np.unique(np.array(inv_flipped.events[:,2])))
+# inv_flipped.events[:,2] = [-ee + cmodulo for ee in inv_flipped.events[:,2]] 
+# print(inv_flipped.events[:,2])
+# epochs2 = {}
+# epochs2['flipped'] = mne.concatenate_epochs([epochs['maintenance'],inv_flipped])
+
+# gen_path2 = avg_path + '/data/{}/{}_models{}_flipped.p'.format(sub,sub,suffix)
+# patterns_path2 = avg_path + '/data/{}/{}_patterns{}_flipped.p'.format(sub,sub,suffix)
+# filters_path2 = avg_path + '/data/{}/{}_filters{}_flipped.p'.format(sub,sub,suffix)
+# scores_path2 = avg_path + '/data/{}/{}_scores{}_flipped.p'.format(sub,sub,suffix)
+# times_path2 = avg_path + '/data/{}/{}_times{}_flipped.p'.format(sub,sub,suffix)
+# fig_path2 = avg_path + '/figures/{}/{}_scores{}_flipped.pdf'.format(sub,sub,suffix)
+# gen2, patterns2, filters2, scores2, times2, _ = dfun.WM_time_gen_classify(epochs2,
+#                                                                         mode = mode,
+#                                                                   inv = inv, lmask = lmask,
+#                                                                   score = True, 
+#                                                                   n_features = n_features,
+#                                                                   twindows = [tmin,tmax],
+#                                                                   l_freq = None,
+#                                                                   h_freq = h_freq,
+#                                                                   smooth = smooth_kwargs,
+#                                                                   save_filters = filters_path2,                     
+#                                                                   save_scores = scores_path2,
+#                                                                   save_patterns = patterns_path2,
+#                                                                   save_gen = gen_path2,
+#                                                                   save_times = times_path2)
+
+# ############################## make figure and save #################################
+# print('Plotting')
+# dfun.plot_time_gen_accuracy(scores2, times2, nrows=1, ncols=1, vlines=vlines,
+#                             hlines=hlines, savefig=fig_path2, vmin=vmin, vmax=vmax)

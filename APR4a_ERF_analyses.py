@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+proj_name = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
+wdir = '/projects/' + proj_name + '/scratch/working_memory/'
+scripts_dir = '/projects/' + proj_name + '/scripts/working_memory/'
+import sys
+sys.path.append(scripts_dir)
+
 import mne
 import os
 import os.path as op
@@ -32,7 +38,7 @@ fwd_path = project_dir + '/scratch/forward_models'
 qy = Query(project)
 subs = qy.get_subjects()
 
-scode = 11
+scode = 63
 if len(argv) > 1:
     scode = int(argv[1])
 
@@ -46,7 +52,7 @@ compute_sources = True
 smooth_tstep = 0.025
 smooth_twin = 0.05
 l_freq=.05
-h_freq=40
+h_freq=None
 
 suffix = "lf_{}_hf_{}_tstep_{}_twin_{}".format(l_freq,h_freq,smooth_tstep, smooth_twin)
 epochs = {}
@@ -55,7 +61,7 @@ evokeds = {}
 print('\n epoching \n')
 ## Alternative epoching strategy
 tmin = -.1
-tmax = 6.5
+tmax = 4
 reject = dict(mag = 4e-12, grad = 4000e-13)
 epochs = {}
 evokeds = {}
@@ -65,13 +71,14 @@ for cidx, c in enumerate(conds_orig):
     fname = os.path.join(raw_path, sub, c + '_raw_tsss.fif')
     icaname = os.path.join(ica_path,sub, c + '_raw_tsss-ica.fif')
     lfname = op.join(log_path, sub[0:4] + '_' + lnames[cidx] + '_MEG.csv')
-    epochs[nc] = WM_epoching(data_path=fname, ica_path=icaname, tmin=-1, tmax=6.5,
-                                l_freq=.05, h_freq=40, resample = 100, bads=[],
-                                baseline=(-1,0), notch_filter=50,
+    epochs[nc] = WM_epoching(data_path=fname, ica_path=icaname, tmin=tmin, tmax=tmax,
+                                l_freq=l_freq, h_freq=h_freq, resample = 100, bads=[],
+                                baseline=None, notch_filter=50,
                                 events_fun=main_task_events_fun, events_fun_kwargs = {'cond': nc, 'lfname': lfname},
                                 reject=reject)
 
 epochs = mne.concatenate_epochs([epochs[e] for e in epochs])
+print(epochs)
 
 if smooth_tstep:
     new_data, new_times = smooth_data(epochs.get_data(), tstart=epochs.times[0],
@@ -80,8 +87,9 @@ if smooth_tstep:
 
 new_info = epochs.info.copy()
 new_info['sfreq'] = 1/smooth_tstep
+new_event_id = {eid: epochs.event_id[eid] for eid in epochs.event_id if epochs.event_id[eid] in epochs.events[:,2]}
 epochs = mne.EpochsArray(new_data, info = new_info, events = epochs.events,
-                         event_id = epochs.event_id,tmin = epochs.tmin)
+                         event_id = new_event_id,tmin = epochs.tmin)
 
 evokeds = {e: epochs[e].average() for e in epochs.event_id}
 
@@ -138,8 +146,8 @@ if compute_sources:
     fwd = mne.read_forward_solution(fwd_fn)
 
     data_cov = mne.compute_covariance(epochs.load_data().copy().pick_types('mag'),
-                                       tmin= -1,
-                                       tmax = 6.5,rank ='info')
+                                       tmin= tmin,
+                                       tmax = tmax,rank ='info')
     ## inverse solution
     inv = mne.beamformer.make_lcmv(epochs.info,fwd,data_cov, reg=0.05,
                                     pick_ori='max-power',

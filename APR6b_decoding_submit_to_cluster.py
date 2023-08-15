@@ -11,9 +11,9 @@ os.environ['MNE_ROOT']='~/miniconda3/envs/mne' # for surfer
 os.environ['MESA_GL_VERSION_OVERRIDE'] = '3.2'
 
 script_dir = '/projects/{}/scripts/working_memory/'.format(project)
-blocks = ['localizer','task']
-subNs = range(11,91)
-modes = ['source']#['sensor','source']
+blocks = ['task']#'localizer','task']
+subNs = range(11,21)
+modes = ['sensor']#['sensor','source']
 masks = {'': ['']}#, # No mask
          #'include': [['rA1','lA1'], ['rThal','lThal'],['rPCC','lPCC'], ['rHC','lHC'], ['rPCN','lPCN']]}
          #'exclude': [['rA1','lA1'], ['rThal','lThal'],['rPCC','lPCC'], ['rHC','lHC'], ['rPCN','lPCN']]}
@@ -36,8 +36,8 @@ for b in blocks:
                             for srs in rs:
                                 submit_cmd += ' ' + srs
                             # Append job
-                            cb.add_job(cmd=submit_cmd, queue='all.q',n_threads = 5, cleanup = False)
+                            cb.add_job(cmd=submit_cmd, queue='highmem.q',n_threads = 6, cleanup = False)
                 else:
                     #If only sensor, then apply no mask and add job
-                    cb.add_job(cmd=submit_cmd_base, queue='all.q',n_threads = 5, cleanup = False)
+                    cb.add_job(cmd=submit_cmd_base, queue='highmem.q',n_threads = 6, cleanup = False)
 cb.submit()

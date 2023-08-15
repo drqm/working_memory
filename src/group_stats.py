@@ -241,14 +241,17 @@ def grand_avg_scores(sdata):
     return smean, sstd, sci_lower, sci_upper, smedian, siqr_lower, siqr_upper
 
 def do_stats(X, method='FDR', adjacency=None, FDR_alpha=.025, h0=0,sigma=1e-3,
-             cluster_alpha = .025, p_threshold = .05, n_permutations=500, cluster_method = 'normal'):
+             cluster_alpha = .05, p_threshold = .05, n_permutations=500, cluster_method = 'normal'):
     
     n_subjects = X.shape[0]
     if cluster_method == 'normal':
         t_threshold = -stats.distributions.t.ppf(p_threshold / 2., n_subjects - 1)
+        print('Two sided alpha level: {} - t threshold: {}'.format(p_threshold,t_threshold))
+
     elif cluster_method == 'TFCE':
         t_threshold = dict(start=0, step=0.2)
-    
+        print('Two sided alpha level: {} - Using TFCE'.format(p_threshold))
+
     stat_fun = partial(ttest_1samp_no_p, sigma=sigma)
     if method == 'montecarlo':
         print('Clustering.')
@@ -311,14 +314,17 @@ class LinearRegression(linear_model.LinearRegression):
         self = super(LinearRegression, self).fit(Ximp, y)#, n_jobs)
 
         # Calculate standard error
-        sse = np.sum((self.predict(Ximp) - y) ** 2, axis=0) / float(Ximp.shape[0] - Ximp.shape[1])
-        se = np.array([
-            np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(Ximp.T, Ximp))))
-                                                    for i in range(sse.shape[0])
-                    ])
+        df = float(X2.shape[0] - X2.shape[1] - 1)
+        se = np.sqrt(np.sum((self.predict(Ximp) - y) ** 2, axis=0) / (np.sum((X2-np.mean(X2,axis=0,keepdims=True))**2,axis=0) * df)) 
+        print(se)
+        # sse = np.sum((self.predict(Ximp) - y) ** 2, axis=0) / float(Ximp.shape[0] - Ximp.shape[1]+1)
+        # se = np.array([
+        #     np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(Ximp.T, Ximp))))
+        #                                             for i in range(sse.shape[0])
+        #             ])
         # calculate tvals
         #print('negative betas: ', np.sum(self.coef_ < 0))
-        self.t = self.coef_ / se
+        self.t = self.coef_ / np.squeeze(se)
         #self.p = 2 * (1 - stats.t.cdf(np.abs(self.t), y.shape[0] - Ximp.shape[1]))
         return self
 
@@ -327,7 +333,7 @@ def reg_fun(Y, preds):
     lm.fit(X2=preds,y=Y)
     return lm.t
 
-def do_regression(X, preds, adjacency=None, threshold_alpha = .025,  cluster_alpha = .025, n_permutations=500):
+def do_regression(X, preds, adjacency=None, threshold_alpha = .025,  cluster_alpha = .05, n_permutations=500):
     xshape = X.shape
     n_subjects = X.shape[0]
     
@@ -335,7 +341,7 @@ def do_regression(X, preds, adjacency=None, threshold_alpha = .025,  cluster_alp
         tvals = reg_fun(X1, preds)
         return tvals#.reshape((xshape[1],xshape[2],-1))
     
-    threshold = stats.distributions.t.ppf(1 - threshold_alpha, X.shape[0]-preds.shape[1])
+    threshold = stats.distributions.t.ppf(1 - threshold_alpha, preds.shape[0]-preds.shape[1])
     print('threshold: ', threshold)
     print('Clustering.')
     if len(X.shape) == 3:

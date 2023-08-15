@@ -19,7 +19,7 @@ fwd_dir = op.join('/projects',proj_name,'scratch','forward_models')
 
 qy = Query(proj_name)
 subs = qy.get_subjects()
-subno = [11]
+subno = [68]
 if len(argv)>1:
     subno = argv[1:]
 subjects = [subs[int(s)-1] for s in subno]

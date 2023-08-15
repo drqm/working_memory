@@ -13,18 +13,24 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(lme4)
 library(lmerTest)
+library(effects)
 ```
 
 ```{r}
 log_dir <- "../../misc/working_memory_logs"
 fig_dir <- "../../scratch/working_memory/results/figures"
+dem_dir <- "../../misc/WM_demographics.csv"
 bnames <- c('maintenance','manipulation')
 lnames <- c('recognize','invert')
 ```
 
 ```{r}
+dem <- read.table(dem_dir,sep=',',header=T)
+```
+
+```{r}
 ## Load data:
-subjects <- 21:90
+subjects <- 11:90
 scount <- 0
 d <- c()
 for (sub in subjects){
@@ -34,6 +40,8 @@ for (sub in subjects){
     dfile <- sprintf('%s/%04.f_%s_MEG.csv',log_dir,sub,ln)
     print(dfile)
     d0 <- read.table(dfile,sep=',',header=T)
+    
+    d0$subject = as.factor(as.character(d0$subject))
     d0$block <- bnames[b]
     if (scount == 1 & b == 1){
       d <- d0
@@ -42,6 +50,16 @@ for (sub in subjects){
     }
   }
 }
+```
+```{r}
+# Fix subject code:
+d$subject <- gsub("bis", "", d$subject)
+d$subject <- as.numeric(as.character(d$subject))
+```
+
+```{r}
+#Change maintenance condition name
+d$block <- factor(gsub("maintenance",'recall',d$block),levels=c('recall','manipulation'))
 ```
 
 ```{r}
@@ -53,6 +71,7 @@ d$accuracy <- as.numeric(d$type == d$response)
 ## Aggregate data
 d2 <- aggregate(d$accuracy, by=list(d$subject,d$block), mean)
 colnames(d2) <- c('subject','block','accuracy')
+write.csv(d2,'../../misc/WM_accuracies.csv',row.names=FALSE)
 ```
 
 ```{r}
@@ -62,26 +81,98 @@ ap <- ggplot(data=d2, aes(block,accuracy, fill = block)) +
   geom_line(alpha = .1, aes(group=subject)) +
   geom_violin(alpha = .1) +
   scale_fill_manual(values=c('blue','red'))+
-  theme_bw()
-ggsave(paste0(fig_dir,'/behavioral_accuracy.pdf'), ap, dpi= 300, width=15, height=10,units='cm')
-```
-
-
-
-```{r}
-m0 <- glmer(accuracy~block + (1+block|subject), data = d, family = 'binomial')
-```
-
-```{r}
-summary(m0)
+  theme_bw()+
+  theme(legend.position="none")
+print(ap)
+ggsave(paste0(fig_dir,'/behavioral_accuracy.pdf'), ap, dpi= 300, width=10, height=10,units='cm')
 ```
 
 ```{r}
 #subjects to exclude
 #exc <- unique(d2[d2$accuracy <= 0.5 & d2$block == 'maintenance','subject'])
 exc <- unique(d2[d2$accuracy <= 0.5,'subject'])
+exc <- c(exc,15,32,33)
 print(exc)
+dexc <- d[!(d$subject %in% exc),]
+dexc2 <- d2[!(d2$subject %in% exc),]
+demexc <- dem[!(dem$Subject %in% exc),]
 ```
+
+```{r}
+## Make a plot
+#dexc2$block2 <- factor(dexc2$block, levels = c('recall','manipulation'))
+ap <- ggplot(data=dexc2, aes(block,accuracy, fill = block)) +
+  geom_point(alpha=.1) +
+  geom_line(alpha = .1, aes(group=subject)) +
+  geom_violin(alpha = .1) +
+  scale_fill_manual(values=c('blue','red'))+
+  ylim(c(0.4,1)) +
+  geom_hline(yintercept=0.5)+
+  theme_bw()+
+  theme(legend.position="none")
+print(ap)
+ggsave(paste0(fig_dir,'/behavioral_accuracy_exc.pdf'), ap, dpi= 300, width=10, height=10,units='cm')
+```
+
+```{r}
+dexc$block <- factor(dexc$block,levels=c('manipulation','recall'))
+mnull <- glmer(accuracy~1 + (1|subject), data = dexc, family = 'binomial')
+m0 <- glmer(accuracy~block + (1+block|subject), data = dexc, family = 'binomial')
+```
+
+```{r}
+summary(m0)
+```
+```{r}
+block_eff <- as.data.frame(effect("block",m0))
+print(block_eff)
+```
+
+```{r}
+library(broom.mixed)
+tidy(m0,conf.int=TRUE,exponentiate=TRUE,effects="fixed")
+```
+
+```{r}
+anova(mnull,m0)
+```
+```{r}
+table(demexc$Sex)
+mean(demexc$Age,na.rm=T)
+sd(demexc$Age,na.rm=T)
+demexc$yomt[is.nan(demexc$yomt)] <- 0
+mean(demexc$yomt)
+mean(demexc$TrainingGMSI,na.rm=T)
+sd(demexc$TrainingGMSI,na.rm=T)
+
+median(demexc$TrainingGMSI,na.rm=T)
+table(demexc$yomt!=0)
+median(demexc$yomt[demexc$yomt!=0],na.rm=T)
+summary(demexc$yomt[demexc$yomt!=0])#,na.rm=T))
+```
+```{r}
+demexc$recall_accuracy <- dexc2$accuracy[dexc2$block=='recall']
+demexc$manip_accuracy <- dexc2$accuracy[dexc2$block=='manipulation']
+```
+
+
+```{r}
+ggplot(demexc, aes(WM,(manip_accuracy+recall_accuracy)/2)) +
+  geom_point()
+```
+```{r}
+# manip <- lm(manip_accuracy ~ yomt + WM + GMSI + TrainingGMSI + musicianship, data=demexc)
+# maint <- lm(recall_accuracy ~ yomt + WM + GMSI + TrainingGMSI + musicianship, data=demexc)
+manip <- lm(manip_accuracy ~ WM + vividness + difficulty, data=demexc)
+maint <- lm(recall_accuracy ~ WM + vividness+ difficulty, data=demexc)
+diff <- lm(recall_accuracy + manip_accuracy ~ WM, data=demexc)
+
+summary(manip)
+summary(maint)
+summary(diff)
+```
+
+
 
 
 

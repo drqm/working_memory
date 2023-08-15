@@ -16,6 +16,8 @@ proj_name = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
 os.environ['MINDLABPROJ']= proj_name
 
 subj_dir = op.join('/projects',proj_name,'scratch','fs_subjects_dir')
+#subj_dir = op.join('/projects',proj_name,'misc','fs_subjects_dir')
+
 fwd_dir = op.join('/projects',proj_name,'scratch','forward_models')
 
 mkdir_p(subj_dir)

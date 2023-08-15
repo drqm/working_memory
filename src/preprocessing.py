@@ -69,8 +69,15 @@ def main_task_events_fun(events, cond, lfname):
     event_id = {ccc: mappings[cond][ccc]['new'] for ccc in mappings[cond]}
     return new_events, event_id
 
-def main_task_decoding_events_fun(events, lfname):
+def main_task_decoding_events_fun(events, lfname=None):
     events2 = events.copy()[events[:,2] < 20]
     events2[:,2] = [(ev-10)%3 * -1 + 1 for ev in events2[:,2]]
+  
+    if lfname:
+        print('rejecting incorrect trials')
+        ldf = pd.read_csv(lfname, sep = ',', header=0)
+        ldf['acc'] = ldf['type'] == ldf['response']
+        events2 = events2[ldf['acc'], :]
+
     event_id = {'melody' + str(ii): ii for ii in np.unique(events2[:,2])}
     return events2, event_id

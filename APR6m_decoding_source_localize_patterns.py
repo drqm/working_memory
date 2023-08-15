@@ -1,3 +1,9 @@
+proj_name = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
+wdir = '/projects/' + proj_name + '/scratch/working_memory/'
+scripts_dir = '/projects/' + proj_name + '/scripts/working_memory/'
+import sys
+sys.path.append(scripts_dir)
+
 import mne
 import os.path as op
 from stormdb.access import Query
@@ -29,7 +35,8 @@ for scode in scodes:
             print(mode)
             cfname = op.join(data_dir,sub,sub + '_' + mode + '_' + suffix + '.p')
             times_fname = op.join(data_dir,sub,sub + '_times_' + suffix + '.p')
-            inv_fname = op.join(data_dir,sub,sub + '_evoked_inverse_lf_0.05_hf_40_tstep_0.025_twin_0.05.p')
+            #inv_fname = op.join(data_dir,sub,sub + '_evoked_inverse_lf_0.05_hf_40_tstep_0.025_twin_0.05.p')
+            inv_fname = op.join(data_dir,sub,sub + '_decoding_inv_task_lf_0.05_hf_None_grad.p')
 
             print('loading data')
             cfile = open(cfname,'rb')
@@ -47,7 +54,8 @@ for scode in scodes:
             for cp in p:
                 p[cp].times = times[cp[0:-1]]
 
-            p['interaction'] = mne.combine_evoked([p['manipulation1'],p['maintenance1']],weights=[1,-1])
+            if ('manipulation1' in p.keys()) and ('maintenance1' in p.keys()):
+                p['interaction'] = mne.combine_evoked([p['manipulation1'],p['maintenance1']],weights=[1,-1])
 
             print('localizing')
             sources = {}
@@ -56,7 +64,7 @@ for scode in scodes:
                 sources[e].tmin = times[cp[0:-1]][0]
                 sources[e].tmax = times[cp[0:-1]][-1]
                 sources[e].tstep = np.diff(times[cp[0:-1]])[0]
-
+                print(sources[e].data.shape)
             # Saving
             src_fname = op.join(data_dir,sub,sub + '_{}_sources_{}_localized.p'.format(mode,suffix))
             src_file = open(src_fname,'wb')
