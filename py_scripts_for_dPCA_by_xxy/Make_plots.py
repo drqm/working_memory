@@ -16,14 +16,14 @@ from numpy.random import rand, randn, randint
 from dPCA import dPCA
 
 import sys
-sys.path.append('./src')
+sys.path.append('../src')
 from preprocessing import *
 
 mne.set_log_level('CRITICAL')
 
 directory = wdir + "01_raw_maxfiltered/"
 ls = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
-ls = ls[2:]
+
 print(ls)
 
 for _id_ in ls:
@@ -87,7 +87,7 @@ for _id_ in ls:
             event_data = np.concatenate([event_data, filler], axis=1)
         final_data[:, :max_samples, 1, i, :] = event_data
 
-    final_data = final_data.transpose(1, 0, 2, 3, 4)  # [:,:,:,:,-200:]
+    final_data = final_data.transpose(1, 0, 2, 3, 4)[:,:,:,:,-400:]
     print(final_data.shape)  # (max_samples, 306, 2(recall/mainpulate), 2(melody0,melody1), 501)
 
 
@@ -166,7 +166,7 @@ for _id_ in ls:
     # Plot Components
 
     def plot_component():
-        time = np.linspace(0, 5, 501)
+        time = np.linspace(0, final_data.shape[4]//100, final_data.shape[4])
         x = 3  # Increase the number of behavior components, for example, set to 3
         S = 2  # Number of melody types
         melody_colors = ['r', 'b']
