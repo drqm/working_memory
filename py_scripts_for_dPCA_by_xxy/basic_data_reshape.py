@@ -1,6 +1,6 @@
 # Reshape MEG data to nparray for dPCA
 
-wdir = '/Users/xiangxingyu/Downloads/毕业设计/UCB线上科研/data/'
+#wdir = '/Users/xiangxingyu/Downloads/毕业设计/UCB线上科研/data/'
 
 import sys
 sys.path.append('../src')
@@ -13,16 +13,16 @@ import pickle
 
 mne.set_log_level('CRITICAL')
 
-def reshape_to_epochs(*args, _id_: str, **kwargs):
+def reshape_to_epochs(*args, _id_: str, mf_dir, ica_dir, log_dir, **kwargs):
     _id_number = _id_[:4]
 
-    inv_fname = wdir + '01_raw_maxfiltered/' + _id_ + '/inv_raw_tsss.fif'
-    inv_ica_fname = wdir + '02_ica_solution/' + _id_ + '/inv_raw_tsss-ica.fif'
-    inv_lfname = wdir + 'working_memory_logs/' + _id_number + '_invert_MEG.csv'
+    inv_fname = mf_dir + _id_ + '/inv_raw_tsss.fif'
+    inv_ica_fname = ica_dir + _id_ + '/inv_raw_tsss-ica.fif'
+    inv_lfname = log_dir + _id_number + '_invert_MEG.csv'
 
-    main_fname = wdir + '01_raw_maxfiltered/' + _id_ + '/main_raw_tsss.fif'
-    main_ica_fname = wdir + '02_ica_solution/' + _id_ + '/main_raw_tsss-ica.fif'
-    main_lfname = wdir + 'working_memory_logs/' + _id_number + '_recognize_MEG.csv'
+    main_fname = mf_dir + _id_ + '/main_raw_tsss.fif'
+    main_ica_fname = ica_dir + _id_ + '/main_raw_tsss-ica.fif'
+    main_lfname = log_dir + _id_number + '_recognize_MEG.csv'
 
     recall_epochs = WM_epoching(inv_fname, inv_ica_fname, *args,
                                 events_fun_kwargs={'lfname': inv_lfname}, **kwargs)

@@ -174,9 +174,9 @@ def plot_component_coordinate(Z_dic, only_average = True, component_keys = None,
 
     # plt.savefig(f'figs/{subject}/component_plots{components}.png')
 
-def topo_PlotBasis(dpca, component_keys = None, num_components = 3, ch_type = None):
-    with open('recall_epochs_0011.pkl', 'rb') as file:
-        epochs = pickle.load(file)
+def topo_PlotBasis(dpca, epochs, fig_dir='.', sid='all', component_keys = None, num_components = 3, ch_type = 'mag'):
+    # with open('recall_epochs_0011.pkl', 'rb') as file:
+    #     epochs = pickle.load(file)
 
     info = epochs.info
     picked_channels = mne.pick_types(info, meg=True, eeg=False, stim=False, eog=False,
@@ -209,7 +209,7 @@ def topo_PlotBasis(dpca, component_keys = None, num_components = 3, ch_type = No
         fig.suptitle(f'Topomaps for {cz}', fontsize=16, y=1.05)
         plt.tight_layout(rect=[0, 0, 0.9, 1])
 
-        plt.savefig(f'Topomaps/Topomaps for {cz}.png')
+        plt.savefig(f'{fig_dir}{sid}_Topomaps_{cz}_{ch_type}.pdf')
         plt.show()
         plt.close()
 

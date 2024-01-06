@@ -1,8 +1,6 @@
 from dPCA import dPCA
 import numpy as np
 
-
-
 def dpca_fit(stack_array: np.array, dim: str):
     if stack_array.ndim - 3 != len(dim) - 1:
         raise Exception(f'The shape of stack array is not compatible with dim for dpca, {stack_array.shape} and {len(dim) - 1}')
