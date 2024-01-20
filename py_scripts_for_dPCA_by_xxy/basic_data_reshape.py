@@ -3,7 +3,8 @@
 #wdir = '/Users/xiangxingyu/Downloads/毕业设计/UCB线上科研/data/'
 
 import sys
-sys.path.append('../src')
+# sys.path.append('../src')
+sys.path.append('/Users/xiangxingyu/Desktop/working_memory/src')
 from preprocessing import *
 import mne
 
@@ -67,16 +68,17 @@ def concat_different_array(array1, array2):
 
     return final_data
 
-def stack_different_subject_arrays(ls: list):
+def stack_non_nan_subject_arrays(ls: list):
     stacked_array = np.vstack(ls)
 
-    # sort all the nan arrays at last,
-    nan_indices = [i for i in range(stacked_array.shape[0]) if np.isnan(stacked_array[i]).any()]
-    nan_matrices = stacked_array[nan_indices]
-    non_nan_matrices = np.delete(stacked_array, nan_indices, axis=0)
-    stacked_array = np.concatenate((non_nan_matrices, nan_matrices), axis=0)
+    original_indices = np.concatenate([[i] * arr.shape[0] for i, arr in enumerate(ls)])
 
-    return stacked_array
+    nan_indices = [i for i in range(stacked_array.shape[0]) if np.isnan(stacked_array[i]).any()]
+
+    non_nan_matrices = np.delete(stacked_array, nan_indices, axis=0)
+    non_nan_original_indices = np.delete(original_indices, nan_indices)
+
+    return non_nan_matrices, non_nan_original_indices
 
 def remove_nan_matrices(array):
     """
