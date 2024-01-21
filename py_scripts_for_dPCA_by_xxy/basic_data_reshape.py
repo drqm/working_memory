@@ -213,7 +213,19 @@ def reshape_dpca_base_to_evoked_dic(dpca, num_components = 3, info = None):
 
     return evoked_dic
 
+def sort_trial_data_to_subject(Z_dic, original_indices, ls):
+    # Initialize the sorted dictionary
+    dic_sorted_by_subject = {subject: {} for subject in ls}
 
+    # Iterate over each trial in the original dictionary
+    for trial_index, subject_index in enumerate(original_indices):
+        trial_key = f'trial{trial_index}'
+        subject = ls[subject_index]
+
+        # Assign the trial data to the corresponding subject
+        dic_sorted_by_subject[subject][trial_key] = Z_dic[trial_key]
+
+    return dic_sorted_by_subject
 
 '''# Running example'''
 # recall_epochs, man_epochs = reshape_to_epochs(-1, 4, _id_ = '0011_U7X', baseline=(-1, 0), notch_filter=50, h_freq=20, l_freq=0.1, events_fun=main_task_decoding_events_fun, resample=100)
