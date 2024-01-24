@@ -68,7 +68,10 @@ def concat_different_array(array1, array2):
 
     return final_data
 
-def stack_non_nan_subject_arrays(ls: list):
+def stack_different_subject_arrays(ls: list):
+    
+    # stack different subjcets' trials data
+    
     stacked_array = np.vstack(ls)
 
     original_indices = np.concatenate([[i] * arr.shape[0] for i, arr in enumerate(ls)])
@@ -80,7 +83,7 @@ def stack_non_nan_subject_arrays(ls: list):
 
     return non_nan_matrices, non_nan_original_indices
 
-def remove_nan_matrices(array):
+def remove_nan_matrices(array):    
     """
     remove Nan arrays
 
@@ -90,6 +93,8 @@ def remove_nan_matrices(array):
     return:
     a new array same shape as the original, but with no nan arrays
     """
+    
+    # It seems that this function is useless now
 
     nan_indices = find_nan_matrices(array)
 
@@ -105,6 +110,9 @@ def find_nan_matrices(array):
     returns:
     nan indecies
     """
+    
+    # It seems that this function is useless now
+    
     axes = tuple(range(1, array.ndim))
 
     nan_matrices = np.any(np.isnan(array), axis=axes)
