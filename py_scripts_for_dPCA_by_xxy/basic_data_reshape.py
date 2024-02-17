@@ -124,10 +124,10 @@ def make_dic(Z, dpca, final_data, *args, **kwargs): #final_data is by stack_diff
 
     for i in range(len(final_data)):
         tmp_trial = dpca.transform(final_data[i])
-        for j in tmp_trial :
-            tmp_trial [j] = moving_average(tmp_trial[j], *args, **kwargs)
+#         for j in tmp_trial :
+#             tmp_trial [j] = moving_average(tmp_trial[j], *args, **kwargs)
 
-        dic[f'subject{i}'] = tmp_trial
+        dic[f'trial{i}'] = tmp_trial
     dic['average'] = Z
 
     return dic

@@ -1,23 +1,24 @@
+#%matplotlib inline
 import sys
 sys.path.append('src')
 sys.path.append('py_scripts_for_dPCA_by_xxy')
 
-from basic_data_reshape import *
 from dpca_calculation import dpca_fit
 import pickle
+import basic_data_reshape
 import plots
 import importlib
 import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning) 
-
+importlib.reload(basic_data_reshape)
 importlib.reload(plots)
-
+from basic_data_reshape import *
 from plots import *
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 import matplotlib.pyplot as plt
 
 #ls = ['0011_U7X', '0012_VK2', '0013_NHJ', '0014_BKO', '0016_HJF', '0017_G8O']
-ls = ['0011_U7X']
+ls = ['0011_U7X','0012_VK2']
 
 if len(sys.argv) > 1:
     ls = sys.argv[1:]
@@ -39,8 +40,9 @@ elif host == 'china':
     fig_dir = './'
     out_dir = './'
 array_ls = []
+tmin, tmax = -1,4
 for i in ls:
-    recall_epochs, man_epochs = reshape_to_epochs(-1, 4, _id_ = i, 
+    recall_epochs, man_epochs = reshape_to_epochs(tmin, tmax, _id_ = i, 
                                                   mf_dir=mf_dir,
                                                   ica_dir=ica_dir,
                                                   log_dir=log_dir,
@@ -55,12 +57,15 @@ for i in ls:
     tmp_array = concat_different_array(array1, array2)
     array_ls.append(tmp_array)
 
-final_array_for_dpca = stack_different_subject_arrays(array_ls)
+# Get sampling frequency
+sfreq = recall_epochs.info['sfreq']
+
+final_array_for_dpca, original_indices = stack_different_subject_arrays(array_ls)
 
 print(final_array_for_dpca.shape)
 
 # Clean the Nan arrays
-final_array_for_dpca = remove_nan_matrices(final_array_for_dpca)
+#final_array_for_dpca = remove_nan_matrices(final_array_for_dpca)
 print((final_array_for_dpca.shape))
 
 # Fit dPCA
@@ -80,7 +85,8 @@ else:
 
 # Save array
 with open(out_dir + prefix + '_dPCA.p', 'wb') as file:
-    pickle.dump(Z_dic, file)
+    pickle.dump({'Z_dic': Z_dic, 'original_indices': original_indices,
+                 'ls': ls, 'dpca': dpca, 'sfreq': sfreq, 'tmin': tmin}, file)
 
 # Plot
 plot_component_coordinate(Z_dic)

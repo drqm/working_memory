@@ -10,15 +10,16 @@ os.environ['MESA_GL_VERSION_OVERRIDE'] = '3.2'
 
 script_dir = '/projects/{}/scripts/working_memory/'.format(project)
 qr = Query(project)
-subjects = qr.get_subjects()
+all_subjects = qr.get_subjects()
 exclude = [15,32,33,55,58,60,73,76,82]
-subjects = [subjects[s] for s in range(len(subjects)) if (s+1 > 10) & (s+1 not in exclude)]
-subjects += ['all']
+subjects = ['all']
+subjects += [all_subjects[s] for s in range(len(all_subjects)) if (s+1 > 10) & (s+1 < 91) & (s+1 not in exclude)]
+
 #subjects = ['all']
 
 cb = ClusterBatch(project)
 
-for sub in [subjects[-1]]:
+for sub in subjects:
     if sub == 'all':
         csub = [s for s in subjects if s != 'all']
     else:
