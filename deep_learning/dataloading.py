@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 import math
 import sys
-sys.path.append('./src')
+sys.path.append('../src')
 from preprocessing import *
 import torch
 

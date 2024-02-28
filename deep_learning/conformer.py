@@ -37,7 +37,7 @@ class PatchEmbedding(nn.Module):
         size = 20
         self.shallownet = nn.Sequential(
             nn.Conv2d(1, size, (1, 25), (1, 1)),
-            nn.Conv2d(size, size, (306, 16), (1, 1)),
+            nn.Conv2d(size, size, (35, 7), (1, 1)),
             nn.BatchNorm2d(size),
             nn.ELU(),
             nn.AvgPool2d((1, 15), (1, 5)),  # pooling acts as slicing to obtain 'patch' along the time dimension as in ViT
@@ -114,10 +114,10 @@ class GELU(nn.Module):
 class TransformerEncoderBlock(nn.Sequential):
     def __init__(self,
                  emb_size,#表示输入数据的嵌入维度
-                 num_heads=4,#多头自注意力的头数
-                 drop_p=0.5,#多头自注意力后的 dropout 概率
+                 num_heads=8,#多头自注意力的头数
+                 drop_p=0.3,#多头自注意力后的 dropout 概率
                  forward_expansion=4,#前馈神经网络中间层的扩展倍数
-                 forward_drop_p=0.5):#前馈神经网络中的 dropout 概率
+                 forward_drop_p=0.3):#前馈神经网络中的 dropout 概率
         super().__init__(
             ResidualAdd(nn.Sequential(
                 nn.LayerNorm(emb_size),
@@ -152,7 +152,7 @@ class ClassificationHead(nn.Module):
         ).to(device)  # 将这个子模块移到设备上
 
         self.fc = nn.Sequential(
-            nn.Linear(1360, k),
+            nn.Linear(2880, k),
             nn.ELU(),
             nn.Dropout(0.4),
             nn.Linear(k, 16),
@@ -170,7 +170,7 @@ class ClassificationHead(nn.Module):
 
 #模型整体框架
 class Conformer(nn.Sequential):
-    def __init__(self, emb_size=20, depth=5, n_classes=2, **kwargs):
+    def __init__(self, emb_size=40, depth=5, n_classes=4, **kwargs):
         super().__init__(
             PatchEmbedding(emb_size),
             TransformerEncoder(depth, emb_size),
