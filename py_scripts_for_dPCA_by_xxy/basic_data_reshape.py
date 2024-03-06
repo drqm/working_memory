@@ -35,6 +35,7 @@ def reshape_to_epochs(*args, _id_: str, mf_dir, ica_dir, log_dir, **kwargs):
 
 def reshape_epoch_to_array(epochs):
     event_types = list(epochs.event_id.keys())
+    print(event_types)
     n_samples = {event: len(epochs[event]) for event in event_types}
 
     max_samples = max(n_samples.values())

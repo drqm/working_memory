@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+proj_name = 'MINDLAB2020_MEG-AuditoryPatternRecognition'
+wdir = '/projects/' + proj_name + '/scratch/working_memory/'
+scripts_dir = '/projects/' + proj_name + '/scripts/working_memory/'
+import sys
+sys.path.append(scripts_dir)
+
 import mne
 import os
 import os.path as op
@@ -11,6 +17,7 @@ from sys import argv
 from stormdb.access import Query
 from warnings import filterwarnings
 from copy import deepcopy
+from src.preprocessing import WM_epoching, main_task_events_fun, default_events_fun
 #matplotlib.use('Qt4Agg')
 filterwarnings("ignore", category=DeprecationWarning)
 
@@ -26,6 +33,7 @@ ica_path = project_dir + '/scratch/working_memory/ICA'
 avg_path = project_dir + '/scratch/working_memory/averages'
 subjects_dir = project_dir + '/scratch/fs_subjects_dir'
 fwd_path = project_dir + '/scratch/forward_models'
+log_path = project_dir + '/misc/working_memory_logs'
 
 ## Get subject codes
 qr = Query(project)
@@ -41,47 +49,66 @@ fwd_fn = op.join(fwd_path, sub + '_vol-fwd.fif')
 fwd = mne.read_forward_solution(fwd_fn)
 
 ## Conditions to analyse
-conds = ['main','inv']
+conds_orig = ['main','inv']
+conds = ['maintenance','manipulation']
+lnames = ['recognize','invert']
 event_ids = [[['same',1],['different',2]],[['inverted',3],['other',4]]]
 chans = 'mag' # select channels to do the inversion
+reject = dict(mag = 4e-12, grad = 4000e-13)
+
 # Preprocess data looping over blocks:
 epochs = {}
 power = {}
-for cidx, c in enumerate(conds):
-
+for cidx, c in enumerate(conds_orig):
+    nc = conds[cidx]
     # Load data, apply ICA and resample
-    fname = os.path.join(raw_path, sub, c + '_raw_tsss.fif')
-    icaname = os.path.join(ica_path,sub, c + '_raw_tsss-ica.fif')
-    raw = mne.io.read_raw_fif(fname, preload = True) # load data
-    ica = mne.preprocessing.read_ica(icaname) # load ica solution
-    raw = ica.apply(raw) # apply ICA
-    raw.resample(400)
-
-    # Get and correct triggers:
-    events = mne.find_events(raw, shortest_event = 1)
-    events = events[np.append(np.diff(events[:,0]) >2,True)] # delete spurious t
-    events2 = events.copy()
-    events2 = events2[events[:,2] < 20]
-    events2[:,2] = events[np.isin(events[:,2]//10,[11,21]),2]//100 + cidx*2# recode events
-
-    # Epoching parameters:
-    event_id = dict(event_ids[cidx])
-    picks = mne.pick_types(raw.info, meg = True)
+       # event_id = dict(event_ids[cidx])
+    #picks = mne.pick_types(raw.info, meg = True)
     tmin, tmax = -1.25, 6.5 #epoch time
     baseline = (-1.25, 0) # baseline time
-    reject = dict(mag = 8e-12, grad = 4000e-13) #eeg = 200e-6, #, eog = 250e-6)
+    fname = os.path.join(raw_path, sub, c + '_raw_tsss.fif')
+    icaname = os.path.join(ica_path,sub, c + '_raw_tsss-ica.fif')
+    lfname = op.join(log_path, sub[0:4] + '_' + lnames[cidx] + '_MEG.csv')
+    epochs[nc] = WM_epoching(data_path=fname, ica_path=icaname, tmin=tmin, tmax=tmax,
+                            l_freq=None, h_freq=None, resample = 400, bads=[],
+                            baseline=baseline, notch_filter=50,
+                            events_fun=main_task_events_fun, events_fun_kwargs = {'cond': nc, 'lfname': lfname},
+                                    reject=reject)
+    epochs[nc] = epochs[nc].pick_types(chans)
 
-    #epoching:
-    epochs[c] = mne.Epochs(raw, events = events2, event_id = event_id,
-                    tmin = tmin, tmax = tmax, picks = picks,
-                    baseline = baseline, reject = reject)
+    # Load data, apply ICA and resample
+#         fname = os.path.join(raw_path, sub, c + '_raw_tsss.fif')
+#         icaname = os.path.join(ica_path,sub, c + '_raw_tsss-ica.fif')
+#         raw = mne.io.read_raw_fif(fname, preload = True) # load data
+#         ica = mne.preprocessing.read_ica(icaname) # load ica solution
+#         raw = ica.apply(raw) # apply ICA
+#         raw.resample(400)
+
+#         # Get and correct triggers:
+#         events = mne.find_events(raw, shortest_event = 1)
+#         events = events[np.append(np.diff(events[:,0]) >2,True)] # delete spurious t
+#         events2 = events.copy()
+#         events2 = events2[events[:,2] < 20]
+#         events2[:,2] = events[np.isin(events[:,2]//10,[11,21]),2]//100 + cidx*2# recode events
+
+#         # Epoching parameters:
+#         event_id = dict(event_ids[cidx])
+#         picks = mne.pick_types(raw.info, meg = True)
+#         tmin, tmax = -1.25, 6.5 #epoch time
+#         baseline = (-1.25, 0) # baseline time
+#         reject = dict(mag = 8e-12, grad = 4000e-13) #eeg = 200e-6, #, eog = 250e-6)
+
+#         #epoching:
+#         epochs[c] = mne.Epochs(raw, events = events2, event_id = event_id,
+#                         tmin = tmin, tmax = tmax, picks = picks,
+#                         baseline = baseline, reject = reject)
 ### TFR analyses
 # put all epochs together and select channels
 all_epochs = mne.epochs.concatenate_epochs([epochs[c] for c in epochs])
 all_epochs.pick_types(chans)
 sfreq = all_epochs.info['sfreq']
 del epochs # free memory
-del raw
+#del raw
 ## Transform to source space:
 ## calculate data covariance
 data_cov = mne.compute_covariance(all_epochs, tmin= -1, tmax = 6.5, rank =None)
@@ -91,13 +118,16 @@ inv = mne.beamformer.make_lcmv(all_epochs.info, fwd, data_cov, reg=0.05,
                                   weight_norm= 'nai', rank = None, pick_ori='max-power')
 
 print('processing HFA')
-freqs = np.arange(50, 160, 10)
+freqs = np.arange(60, 150, 10)
 print(freqs)
-n_cycles = freqs / 2.
+n_cycles = freqs / 16.
 n_cycles[np.where(n_cycles < 2)] = 2
 time_bandwidth = 7
 stc_pwr = {}
-sbpwr = {} 
+sbpwr = {}
+sconds = ['maintenance','manipulation','mel1','mel2',
+          'maintenance/mel1','maintenance/mel2','manipulation/mel1',
+         'manipulation/mel2','same','diff1','diff2','inv','other1','other2']
 for fidx in range(len(freqs)):
     freq = [freqs[fidx]]
     cpwr = np.zeros((len(all_epochs.events), inv['n_sources'], 1, int(np.ceil(len(all_epochs.times)/4))))
@@ -131,14 +161,19 @@ for fidx in range(len(freqs)):
     print(bstd.shape)
     for trix in range(cpwr.shape[0]):
         print('z scoring epoch {}'.format(trix+1))
-        cpwr[trix,:,:,:] = cpwr[trix,:,:,:] - bmean
-        cpwr[trix,:,:,:] = cpwr[trix,:,:,:] / bstd
+        cpwr[trix,:,:,:] -= bmean[0,...]
+        cpwr[trix,:,:,:] /= bstd[0,...]
+        bmean2 = np.squeeze(np.mean(cpwr[trix][:,:,btidx], axis = -1,keepdims=True))
+        print(bmean2.shape)
+        cpwr[trix,:,:,:] -= bmean2[:,None,None]
     del bmean
     del bstd
+    del bmean2
+    
     print(cpwr.shape)
-    for eid in all_epochs.event_id.keys():
+    for eid in sconds:
         print('averaging source power for HFA condition {} frequency {}'.format(eid,freq))
-        eidx = all_epochs.events[:,2] == all_epochs.event_id[eid]
+        eidx = np.array([e in all_epochs[eid].events[:,2] for e in all_epochs.events[:,2]])
         sbpwr.setdefault(eid, np.zeros((inv['n_sources'], len(freqs), len(stc2.times))))
         mnpwr = np.mean(cpwr[eidx,:,:,:],axis=0)
         sbpwr[eid][:,fidx,:] = np.squeeze(mnpwr)
@@ -155,5 +190,5 @@ src_file = open(src_fname,'wb')
 pickle.dump(stc_pwr, src_file)
 src_file.close()
 print('src file saved')
-del stc
-del stc_pwr
+#del stc
+#del stc_pwr

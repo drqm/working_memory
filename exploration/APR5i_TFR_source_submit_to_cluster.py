@@ -19,16 +19,20 @@ qr = Query(project)
 sub_codes = qr.get_subjects()
 
 #subNs = np.arange(8) + 1
-subNs = range(21,91)#,11,12,13,14,15,16]
-subNs = [24]
-bands = ['delta','theta','alpha','beta1','beta2']
+subNs = range(11,91)#,11,12,13,14,15,16]
+#subNs = [24]
+#bands = ['delta','theta','alpha','beta1','beta2']#,'HFA']
 bands = ['HFA']
 cb = ClusterBatch(project)
 for s in subNs:
     for b in bands:
         #sub = sub_codes[s-1]
-        #submit_cmd = 'python {}APR5j_TFR_analyses_source2.py {} {}'.format(script_dir,s,b)
-        submit_cmd = 'python {}APR5k_TFR_analyses_source_HFA.py {}'.format(script_dir,s)
+        print(s,b)
+        if b == 'HFA':
+            submit_cmd = 'python {}exploration/APR5k_TFR_analyses_source_HFA.py {}'.format(script_dir,s)
+        else:
+            submit_cmd = 'python {}exploration/APR5j_TFR_analyses_source2.py {} {}'.format(script_dir,s,b)
+        #
         cb.add_job(cmd=submit_cmd, queue='all.q',n_threads = 4,cleanup = False)
 
 cb.submit()

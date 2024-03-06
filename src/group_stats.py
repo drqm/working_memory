@@ -240,7 +240,7 @@ def grand_avg_scores(sdata):
         
     return smean, sstd, sci_lower, sci_upper, smedian, siqr_lower, siqr_upper
 
-def do_stats(X, method='FDR', adjacency=None, FDR_alpha=.025, h0=0,sigma=1e-3,
+def do_stats(X, method='FDR', adjacency=None, FDR_alpha=.025, h0=0,sigma=1e-3,n_jobs=-1,
              cluster_alpha = .05, p_threshold = .05, n_permutations=500, cluster_method = 'normal'):
     
     n_subjects = X.shape[0]
@@ -259,7 +259,7 @@ def do_stats(X, method='FDR', adjacency=None, FDR_alpha=.025, h0=0,sigma=1e-3,
             X = X.transpose(0,2,1)
             
         tvals, clusters, cluster_p_values, H0 = \
-            spatio_temporal_cluster_1samp_test(X-h0, adjacency=adjacency, n_jobs=-1,
+            spatio_temporal_cluster_1samp_test(X-h0, adjacency=adjacency, n_jobs=n_jobs,
                                                 threshold=t_threshold, buffer_size=None,
                                                 verbose=True, n_permutations = n_permutations,
                                                 out_type='mask', stat_fun=stat_fun)

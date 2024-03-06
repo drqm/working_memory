@@ -3,7 +3,7 @@ import numpy as np
 import mne
 import pickle
 
-def three_d_plot_component_coordinate(Z_dic, component_keys, only_average = True,subject = 'average', time_slice_length = 50): #Z_dic: dic by basic_data_resahape.make_dic; component_keys: ls(len = 3)
+def three_d_plot_component_coordinate(Z_dic, component_keys, only_average = True,subject = 'average', time_slice_length = 10): #Z_dic: dic by basic_data_resahape.make_dic; component_keys: ls(len = 3)
     total_time_points = Z_dic[subject]['t'].shape[-1]  # time_length
     num_time_slices = total_time_points // time_slice_length  # cut slice
 
@@ -93,9 +93,9 @@ def three_d_plot_component_coordinate(Z_dic, component_keys, only_average = True
     # plt.savefig(f'figs/{subject}/latent_space_slices{component_keys}{time_slice_length}.png')
 
 
-def plot_component_coordinate(Z_dic, only_average = True, component_keys = None, subject = 'average', num_components = 3, main_compare = 'Stimuli'):
+def plot_component_coordinate(Z_dic, time, only_average = True, component_keys = None, subject = 'average', num_components = 3, main_compare = 'Stimuli'):
 
-    time = np.linspace(0, Z_dic[subject]['t'].shape[-1] // 100, Z_dic[subject]['t'].shape[-1])
+#    time = np.linspace(0, Z_dic[subject]['t'].shape[-1] // 100, Z_dic[subject]['t'].shape[-1])
 
     S = 2  # Number of melody types
 
@@ -131,7 +131,7 @@ def plot_component_coordinate(Z_dic, only_average = True, component_keys = None,
                         alpha = alphas[j][s]
                         alpha *= (0.1 if subject != 'average' else 1)
                         label = f"{'Recall' if j == 0 else 'Manipulate'} Melody{s}" if subject == 'average' else None
-                        plt.plot(time, data[i, s, j], color=color, alpha=alpha, label=label)
+                        plt.plot(time, data[i, j, s], color=color, alpha=alpha, label=label)
 
                 plt.title(f'{i + 1} behavior component for {data_label}')
                 plt.legend()
@@ -162,7 +162,7 @@ def plot_component_coordinate(Z_dic, only_average = True, component_keys = None,
                             alpha = alphas[j][s]
                             alpha *= (0.1 if subject != 'average' else 1)
                             label = f"{'Recall' if j == 0 else 'Manipulate'} Melody{s}" if subject == 'average' else None
-                            plt.plot(time, data[i, s, j], color=color, alpha=alpha, label=label)
+                            plt.plot(time, data[i, j, s], color=color, alpha=alpha, label=label)
 
                     plt.title(f'{i + 1} behavior component for {data_label}')
                     if subject == 'average':
