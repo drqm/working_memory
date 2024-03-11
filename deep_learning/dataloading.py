@@ -6,20 +6,21 @@ sys.path.append('../src')
 from preprocessing import *
 import torch
 
-
-host = 'china'  # 'aarhus'
+host = 'aarhus' #'china'
 if host == 'aarhus':
     wdir = '/projects/MINDLAB2020_MEG-AuditoryPatternRecognition/'
     mf_dir = wdir + 'scratch/maxfiltered_data/tsss_st16_corr96/'
     ica_dir = wdir + 'scratch/working_memory/ICA/'
     log_dir = wdir + 'misc/working_memory_logs/'
-    fig_dir = wdir + 'scratch/working_memory/dPCA/figures/'
+    fig_dir = wdir + 'scratch/working_memory/deep_learning/figures/'
+    acc_dir = wdir + 'scratch/working_memory/deep_learning/data/'
 elif host == 'china':
     wdir = '/Users/xiangxingyu/Downloads/毕业设计/UCB线上科研/data/'
     mf_dir = wdir + '01_raw_maxfiltered/'
     ica_dir = wdir + '02_ica_solution/'
     log_dir = wdir + 'working_memory_logs/'
     fig_dir = './'
+    acc_dir = './'
 
 def reshape_to_epochs(*args, _id_: str, mf_dir, ica_dir, log_dir, **kwargs):
     _id_number = _id_[:4]
@@ -60,7 +61,9 @@ def get_subject_array_ls(subject):
 
     recall_array_ls = get_array_from_epoch(recall_epochs)  # [(30, 306, 501), (29, 306, 501)]
     manual_array_ls = get_array_from_epoch(man_epochs)  # [(30, 306, 501), (30, 306, 501)]
-    return recall_array_ls, manual_array_ls
+    # Let's also return the time variable and frequency of sampling
+    times, Fs = recall_epochs.times, recall_epochs.info['sfreq']
+    return recall_array_ls, manual_array_ls, times, Fs
 
 def calc_diff_entropy_gpu(signal):
     var = torch.var(signal, dim=-1, keepdim=True)
@@ -85,4 +88,8 @@ def DElize(data, window_size, stride = 100):
 
     return diff_entropy_seq
 
+def save_accuracy(cacc,csubject,suffix=''):
+    f = f'{acc_dir}{csubject}_accuracy{suffix}.p'
+    with open(f,'wb') as cf:
+        pickle.dump(cacc,cf)
 # recall_array_ls, manual_array_ls = get_subject_array_ls('0011_U7X')

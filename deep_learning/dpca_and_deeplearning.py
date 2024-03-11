@@ -120,6 +120,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # Train and Test within epochs
-for epoch in range(1, 20):
+for epoch in range(1, 40):
     train(model, device, train_loader, optimizer, criterion_cls, epoch)
     tes(model, device, test_loader, criterion_cls)

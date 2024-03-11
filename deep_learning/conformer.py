@@ -152,7 +152,8 @@ class ClassificationHead(nn.Module):
         ).to(device)  # 将这个子模块移到设备上
 
         self.fc = nn.Sequential(
-            nn.Linear(2880, k),
+            #nn.Linear(2880, k),
+            nn.Linear(1280, k),
             nn.ELU(),
             nn.Dropout(0.4),
             nn.Linear(k, 16),
