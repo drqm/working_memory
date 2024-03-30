@@ -13,15 +13,18 @@ qr = Query(project)
 all_subjects = qr.get_subjects()
 exclude = [15,32,33,55,58,60,73,76,82]
 
-subjects = [all_subjects[s] for s in range(len(all_subjects)) if (s+1 > 12) & (s+1 < 91) & (s+1 not in exclude)]
-periods = ['listen','imagine']
+subjects = [all_subjects[s] for s in range(len(all_subjects)) if (s+1 > 10) & (s+1 < 91) & (s+1 not in exclude)]
+periods = ['baseline']#,'imagine','listen','baseline']
 #subjects = ['all']
 
 cb = ClusterBatch(project)
 
 for sub in subjects:
+  # for f in ['False','True']:
+  #   for n in [2,4]:
     for p in periods:
-        submit_cmd = f'python {script_dir}APR5e_dPCA_deep_learning.py {sub} {p}'
+        print(sub,p)# f, n
+        submit_cmd = f'python {script_dir}APR5e_dPCA_deep_learning.py {sub} {p}'# {n} {f}
         os.system(submit_cmd)
 
 #         cb.add_job(cmd=submit_cmd, queue='all.q', cleanup = False)#n_threads=4

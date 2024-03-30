@@ -39,6 +39,7 @@ def reshape_to_epochs(*args, _id_: str, mf_dir, ica_dir, log_dir, **kwargs):
                                     events_fun_kwargs={'lfname': main_lfname},**kwargs)
 
     return recall_epochs, manipulate_epochs
+
 def get_array_from_epoch(epochs):
     array_ls = []
     event_types = list(epochs.event_id.keys())
@@ -47,17 +48,21 @@ def get_array_from_epoch(epochs):
         event_data = epochs[event].get_data()#.transpose(1, 0, 2)
         array_ls.append(event_data)
     return array_ls
-def get_subject_array_ls(subject):
-    recall_epochs, man_epochs = reshape_to_epochs(-1, 4, _id_=subject,
+
+def get_subject_array_ls(subject,crop=None):
+    recall_epochs, man_epochs = reshape_to_epochs(-2, 4, _id_=subject,
                                                   mf_dir=mf_dir,
                                                   ica_dir=ica_dir,
                                                   log_dir=log_dir,
-                                                  baseline=(-1, 0),
+                                                  baseline=(-2, 0),
                                                   notch_filter=50,
-                                                  h_freq=20,
+                                                  h_freq=40,
                                                   l_freq=0.1,
                                                   events_fun=main_task_decoding_events_fun,
                                                   resample=100)
+    if crop:
+        recall_epochs.crop(crop[0],crop[1])
+        man_epochs.crop(crop[0],crop[1])
 
     recall_array_ls = get_array_from_epoch(recall_epochs)  # [(30, 306, 501), (29, 306, 501)]
     manual_array_ls = get_array_from_epoch(man_epochs)  # [(30, 306, 501), (30, 306, 501)]
